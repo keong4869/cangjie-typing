@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JOE蛇 倉頡打字練習站</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+  background: linear-gradient(135deg, #a8e6ff, #ffe6a8); min-height: 100vh; color: #333; }
+header { background: #ff8c42; color: white; padding: 15px 25px;
+  display: flex; justify-content: space-between; align-items: center;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
+header h1 { font-size: 24px; }
+#userInfo { font-size: 16px; background: rgba(255,255,255,0.3); padding: 6px 14px; border-radius: 20px; }
+.screen { display: none; padding: 30px 20px; max-width: 800px; margin: 0 auto; }
+.screen.active { display: block; }
+h2 { text-align: center; margin-bottom: 20px; color: #d35400; }
+input[type="text"] { width: 100%; padding: 14px; font-size: 20px;
+  border: 3px solid #ffb347; border-radius: 12px; margin-bottom: 15px; text-align: center; }
+button { display: block; width: 100%; padding: 14px; font-size: 18px; font-weight: bold;
+  background: #ff8c42; color: white; border: none; border-radius: 12px; cursor: pointer;
+  transition: transform 0.1s, background 0.2s; }
+button:hover { background: #e67e22; }
+button:active { transform: scale(0.97); }
+.btn-secondary { background: #4a90e2; margin-top: 15px; }
+.btn-secondary:hover { background: #357abd; }
+.btn-small { width: auto; padding: 10px 16px; font-size: 15px; background: #fff;
+  color: #d35400; border: 2px solid #ffb347; display: inline-block; margin: 5px; }
+.level-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px; margin-bottom: 20px; }
+.level-card { background: white; border: 3px solid #ffb347; border-radius: 14px;
+  padding: 15px; text-align: center; cursor: pointer; transition: transform 0.15s; }
+.level-card:hover { transform: translateY(-4px); box-shadow: 0 6px 14px rgba(0,0,0,0.15); }
+.level-card .level-num { font-size: 24px; font-weight: bold; color: #ff8c42; }
+.level-card .level-name { font-size: 14px; margin-top: 6px; color: #666; }
+.level-card .level-count { font-size: 11px; color: #aaa; margin-top: 4px; }
+.practice-header { display: flex; justify-content: space-between; font-size: 16px;
+  font-weight: bold; color: #d35400; margin-bottom: 15px; background: white;
+  padding: 10px 16px; border-radius: 10px; }
+.question-box { background: white; border-radius: 20px; padding: 40px 30px;
+  text-align: center; margin-bottom: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+  min-height: 200px; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; }
+#questionChar { font-size: 120px; font-weight: bold; color: #2c3e50; }
+#contextDisplay { font-size: 42px; letter-spacing: 6px; line-height: 1.8;
+  color: #2c3e50; word-break: break-all; }
+#contextDisplay .article-title { font-size: 16px; color: #999; letter-spacing: 1px;
+  margin-bottom: 20px; }
+#contextDisplay .current-char { color: #e74c3c; font-weight: bold;
+  border-bottom: 4px solid #e74c3c; padding-bottom: 2px; }
+.feedback { text-align: center; font-size: 20px; font-weight: bold; min-height: 30px; margin: 10px 0; }
+.feedback.correct { color: #27ae60; }
+.feedback.wrong { color: #e74c3c; }
+.practice-footer { text-align: center; margin-top: 15px; }
+#scoreContent { background: white; padding: 20px; border-radius: 14px; line-height: 1.9; font-size: 16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⌨️ JOE蛇倉頡打字練習站</h1>
+  <div id="userInfo">未登入</div>
+</header>
+
+<section id="screen-login" class="screen active">
+  <h2>請輸入你的名字</h2>
+  <input type="text" id="playerName" placeholder="例如：陳小明" maxlength="10">
+  <button onclick="login()">開始學習</button>
+</section>
+
+<section id="screen-levels" class="screen">
+  <h2>選擇關卡</h2>
+  <div id="levelList" class="level-list"></div>
+  <button class="btn-secondary" onclick="showScores()">📊 查看成績</button>
+</section>
+
+<section id="screen-practice" class="screen">
+  <div class="practice-header">
+    <span id="levelTitle">關卡</span>
+    <span id="progress">0 / 0</span>
+    <span id="timer">⏱ 00:00</span>
+    <span id="score">⭐ 0</span>
+  </div>
+  <div class="question-box">
+    <div id="questionChar">日</div>
+    <div id="contextDisplay"></div>
+  </div>
+  <input type="text" id="answerInput" placeholder="輸入倉頡碼..." autocomplete="off" maxlength="5">
+  <div class="feedback" id="feedback"></div>
+  <div class="practice-footer">
+    <button class="btn-small" onclick="skipQuestion()">⏭ 跳過</button>
+    <button class="btn-small" onclick="quitPractice()">🏠 返回</button>
+  </div>
+</section>
+
+<section id="screen-scores" class="screen">
+  <h2>我的成績</h2>
+  <div id="scoreContent"></div>
+  <button class="btn-secondary" onclick="showLevels()">返回關卡</button>
+</section>
+
+<section id="screen-result" class="screen">
+  <h2>🎉 關卡完成！</h2>
+  <div id="resultContent"></div>
+  <button onclick="showLevels()">返回關卡</button>
+</section>
+
+<script>
+// ============================================================
+// 倉頡題庫（十關）
+// 圖片位置已留空：請將圖片放入 img/ 資料夾，並將 img 值改為對應路徑
+// 例如：img: "img/A (2).png"
+// ============================================================
+const LEVELS = [
+  {
+    id: 1,
+    name: "字根練習",
+    description: "24個基本倉頡字母",
+    chars: {
+      "日":"A","月":"B","金":"C","木":"D","水":"E","火":"F","土":"G","竹":"H",
+      "戈":"I","十":"J","大":"K","中":"L","一":"M","弓":"N","人":"O","心":"P",
+      "手":"Q","口":"R","尸":"S","廿":"T","山":"U","女":"V","田":"W","卜":"Y"
+    }
+  },
+  {
+    id: 2,
+    name: "輔助字形(哲理類)",
+    description: "根據圖片打出對應倉頡碼",
+    chars: {
+      "曰": { code: "A", img: "img/A (1).png" },
+      "日": { code: "A", img: "img/A (2).png" },
+      "冂": { code: "B", img: "img/B (1).png" },
+      "冖": { code: "B", img: "img/B (2).png" },
+      "夕": { code: "B", img: "img/B (3).png" },
+      "爫": { code: "B", img: "img/B (4).png" },
+      "八": { code: "C", img: "img/C (1).png" },
+      "儿": { code: "C", img: "img/C (2).png" },
+      "丷": { code: "C", img: "img/C (3).png" },
+      "木": { code: "D", img: "img/D (1).png" },
+      "木": { code: "D", img: "img/D (2).png" },
+      "氵": { code: "E", img: "img/E (1).png" },
+      "氺": { code: "E", img: "img/E (2).png" },
+      "灬": { code: "F", img: "img/F (1).png" },
+      "灬": { code: "F", img: "img/F (2).png" },
+      "灬": { code: "F", img: "img/F (3).png" },
+      "土": { code: "G", img: "img/G (1).png" },
+      "士": { code: "G", img: "img/G (2).png" }
+    }
+  },
+  {
+    id: 3,
+    name: "哲理類漢字",
+    description: "以哲理類字根為主，碼長 1~3 碼",
+    chars: {
+      "日":"A","昌":"AA","早":"AJ","明":"AB","旺":"AMG","旦":"AM","旱":"AMJ","昨":"AHS",
+      "月":"B","朋":"BB","肚":"BG","肛":"BM","肝":"BMJ","肌":"BHN","肥":"BAU","肺":"BJB",
+      "金":"C","針":"CJ","釘":"CMN","釗":"CLN","鈔":"CFH","鈍":"CPU","鉛":"CCR","鉗":"CTM",
+      "木":"D","林":"DD","森":"DDD","本":"DM","末":"DJ","朴":"DY","材":"DDH","村":"DDI",
+      "水":"E","江":"EM","汪":"EMG","沐":"ED","沙":"EFH","汗":"EMJ","汨":"EA","池":"EPD",
+      "火":"F","炎":"FF","灶":"FG","灼":"FPI","炒":"FFH","炖":"FPU","炷":"FYG","炆":"FYK",
+      "土":"G","圭":"GG","坦":"GAM","垚":"GGG","垠":"GAV","坨":"GJP","坩":"GTM","坫":"GYR"
+    }
+  },
+  {
+    id: 4,
+    name: "輔助字形(筆劃類)",
+    description: "根據圖片打出對應倉頡碼",
+    chars: {
+"丿": { code: "H", img: "img/H (1).png" },
+"⺮": { code: "H", img: "img/H (2).png" },
+"丶": { code: "I", img: "img/I (1).png" },
+"广": { code: "I", img: "img/I (2).png" },
+"广": { code: "I", img: "img/I (3).png" },
+"亠": { code: "J", img: "img/J (1).png" },
+"𠂇": { code: "K", img: "img/K (1).png" },
+"乂": { code: "K", img: "img/K (2).png" },
+"疒": { code: "K", img: "img/K (3).png" },
+"丨": { code: "L", img: "img/L (1).png" },
+"亅": { code: "L", img: "img/L (2).png" },
+"衤": { code: "L", img: "img/L (3).png" },
+"衤": { code: "L", img: "img/L (4).png" },
+"一": { code: "M", img: "img/M (1).png" },
+"工": { code: "M", img: "img/M (2).png" },
+"工": { code: "M", img: "img/M (3).png" },
+"工": { code: "M", img: "img/M (4).png" },
+"㇆": { code: "N", img: "img/N (1).png" },
+"㇆": { code: "N", img: "img/N (2).png" },
+"㇆": { code: "N", img: "img/N (3).png" },
+"㇆": { code: "N", img: "img/N (4).png" },
+"㇆": { code: "N", img: "img/N (5).png" },
+"㇆": { code: "N", img: "img/N (6).png" },
+"乙": { code: "N", img: "img/N (7).png" }
+    }
+  },
+  {
+    id: 5,
+    name: "筆劃類漢字",
+    description: "打出漢字所需的倉頡碼",
+    chars: {
+      "升":"HT","反":"HE","答":"HOMR","竿":"HMJ","笑":"HHK","第":"HNLH",
+      "朗":"IIB","應":"IGP","允":"IHU","序":"ININ","店":"IYR","庚":"ILO",
+      "守":"JDI","安":"JV","宋":"JD","完":"JMMU","宗":"JMMF","定":"JMYO",
+      "交":"YCK","友":"KE","渡":"EITE","犬":"IK","太":"KI","天":"MK",
+      "大":"K","夫":"QO","失":"HQO","夾":"KOO","夷":"KN","奄":"KLWU",
+      "中":"L","串":"LL","事":"JLLN","書":"LGA","屯":"PU","川":"LLL",
+      "三":"MMM","王":"MG","玉":"MGI","五":"MDM","正":"MYLM","亞":"MLLM",
+      "弓":"N","引":"NL","弘":"NI","弟":"CNLH","弱":"NINIM","張":"NSMV"
+    }
+  },
+  {
+    id: 6,
+    name: "輔助字形(人身類+字型類)",
+    description: "根據圖片打出對應倉頡碼",
+    chars: {
+"亻": { code: "O", img: "img/O (1).png" },
+"𠂉": { code: "O", img: "img/O (2).png" },
+"入": { code: "O", img: "img/O (3).png" },
+"入": { code: "O", img: "img/O (4).png" },
+"入": { code: "O", img: "img/O (5).png" },
+"忄": { code: "P", img: "img/P (1).png" },
+"匕": { code: "P", img: "img/P (2).png" },
+"匕": { code: "P", img: "img/P (3).png" },
+"匕": { code: "P", img: "img/P (4).png" },
+"匕": { code: "P", img: "img/P (5).png" },
+"匕": { code: "P", img: "img/P (6).png" },
+"匕": { code: "P", img: "img/P (7).png" },
+"扌": { code: "Q", img: "img/Q (1).png" },
+"手": { code: "Q", img: "img/Q (2).png" },
+"扌": { code: "Q", img: "img/Q (3).png" },
+"扌": { code: "Q", img: "img/Q (4).png" },
+"口": { code: "R", img: "img/R (1).png" },
+"尸": { code: "S", img: "img/S (1).png" },
+"匚": { code: "S", img: "img/S (2).png" },
+"匚": { code: "S", img: "img/S (3).png" },
+"匚": { code: "S", img: "img/S (4).png" },
+"匚": { code: "S", img: "img/S (5).png" },
+"廿": { code: "T", img: "img/T (1).png" },
+"艹": { code: "T", img: "img/T (2).png" },
+"艹": { code: "T", img: "img/T (3).png" },
+"艹": { code: "T", img: "img/T (4).png" },
+"艹": { code: "T", img: "img/T (5).png" },
+"艹": { code: "T", img: "img/T (6).png" },
+"山": { code: "U", img: "img/U (1).png" },
+"凵": { code: "U", img: "img/U (2).png" },
+"凵": { code: "U", img: "img/U (3).png" },
+"女": { code: "V", img: "img/V (1).png" },
+"女": { code: "V", img: "img/V (2).png" },
+"女": { code: "V", img: "img/V (3).png" },
+"女": { code: "V", img: "img/V (4).png" },
+"田": { code: "W", img: "img/W (1).png" },
+"囗": { code: "W", img: "img/W (2).png" },
+"卜": { code: "Y", img: "img/Y (1).png" },
+"⺊": { code: "Y", img: "img/Y (2).png" },
+"⺊": { code: "Y", img: "img/Y (3).png" },
+"⺊": { code: "Y", img: "img/Y (4).png" }
+    }
+  },
+  {
+    id: 7,
+    name: "字型類漢字",
+    description: "打出漢字所需的倉頡碼",
+    chars: {
+      "局":"SSR","居":"SJR","屈":"SUU","屁":"SPP","尾":"SHQU","尿":"SE",
+      "匹":"SC","巨":"SS","區":"SRRR","匪":"SLMY","匿":"STKR","匱":"SLMC",
+      "花":"TOP","英":"TLBK","草":"TAJ","茶":"TOD","莫":"TAK","莖":"TMVM",
+      "苗":"TW","茫":"TEYV","荒":"TYVU","荔":"TKSS","荷":"TOMR","莘":"TYTJ",
+      "出":"UU","幽":"UVII","凶":"UK","凸":"BSS","凹":"SSU",
+      "女":"V","如":"VR","好":"VND","她":"VPD","妙":"VFH","妹":"VJD",
+      "姐":"VBM","姑":"VJR","姓":"VHQM","委":"HDV","姿":"IOV","威":"IHMV",
+      "男":"WKS","界":"WOLL","畔":"WFQ","畝":"YWNO","畋":"WOK","畊":"WTT",
+      "略":"WHER","畦":"WGG","番":"HDW","畫":"LGWM","畸":"WKMR","畹":"WJNU",
+      "卜":"Y","上":"YM","下":"MY","卡":"YMY","占":"YR","外":"NIY",
+      "朴":"YD","卦":"GGY","卧":"SLY","卓":"YAJ","桌":"YAD","鹵":"YWII"
+    }
+  },
+  {
+    id: 8,
+    name: "綜合打字練習(1~3碼)",
+    description: "打出漢字所需的倉頡碼",
+    chars: {
+      "日":"A","月":"B","金":"C","木":"D","水":"E","火":"F","土":"G",
+      "竹":"H","戈":"I","十":"J","大":"K","中":"L","一":"M","弓":"N",
+      "人":"O","心":"P","手":"Q","口":"R","尸":"S","廿":"T","山":"U",
+      "女":"V","田":"W","卜":"Y","明":"AB","昌":"AA","林":"DD",
+      "炎":"FF","圭":"GG","早":"AJ","忠":"LP","休":"OD","吉":"GR",
+      "天":"MK","太":"KI","屯":"PU","扣":"QR","吐":"RG","奴":"VE",
+      "甲":"WL","立":"YT","朋":"BB","出":"UU","杏":"DR","呆":"RD",
+      "如":"VR","針":"CJ","弘":"NI","引":"NL","弓":"N","枉":"DMG",
+      "固":"WJR","伐":"OI","灶":"FG","車":"JWJ","王":"MG"
+    }
+  },
+  {
+    id: 9,
+    name: "綜合打字練習(3~5碼)",
+    description: "打出漢字所需的倉頡碼",
+    chars: {
+      "電":"MBWU","腦":"BVVW","學":"HBND","校":"DYCK","師":"HRMLB",
+      "開":"ANMT","愛":"BBPE","澳":"EHBK","門":"AN","努":"VEKS",
+      "力":"KS","胡":"JRB","垣":"GMAM","患":"LLP","思":"WP",
+      "坐":"OOG","哇":"RGG","咄":"RUU","未":"JD","桿":"DAMJ",
+      "錢":"CII","柑":"DTM","舍":"OMJR","埋":"GWG","夾":"KOO",
+      "喟":"RWB","焚":"DDF","查":"DAM","崩":"UBB","峽":"UKOO",
+      "單":"RRWJ","夷":"KN","尿":"SE","或":"IRM","奎":"KGG",
+      "革":"TLJ","竺":"HMM","喵":"RTW","摹":"TAKQ","桌":"YAD"
+    }
+  },
+  {
+    id: 10,
+    name: "綜合打字練習(短文章)",
+    description: "逐字打出整句，自動跳到下一句",
+    isArticle: true,
+    articles: [
+      {
+        title: "靜夜思 — 李白",
+        lines: [
+          { text: "床前明月光，", codes: ["ID","TBLN","AB","B","FMU", null] },
+          { text: "疑是地上霜。", codes: ["PKNIO","AMYO","GPD","YM","MBDBU", null] },
+          { text: "舉頭望明月，", codes: ["HCQ","MTMBC","YBHG","AB","B", null] },
+          { text: "低頭思故鄉。", codes: ["OHPM","MTMBC","WP","JROK","VHIIL", null] }
+        ]
+      },
+      {
+        title: "登鸛雀樓 — 王之渙",
+        lines: [
+ { text: "白日依山盡，", codes: ["HA","A","OYHV","U","LMFBT", null] },
+{ text: "黃河入海流。", codes: ["TMWC","EMNR","OH","EOWY","EYIU", null] },
+{ text: "欲窮千里目，", codes: ["CRNO","JCHHN","HJ","WG","BU", null] },
+{ text: "更上一層樓。", codes: ["MLWK","YM","M","SCWA","DLLV", null] }
+        ]
+      },
+      {
+        title: "江雪 — 柳宗元",
+        lines: [
+{ text: "千山鳥飛絕，", codes: ["HJ","U","HAYF","NOHTO","VFSHU", null] },
+{ text: "萬徑人蹤滅。", codes: ["TWLB","HOMVM","O","RMHOO","EIHF", null] },
+{ text: "孤舟簑笠翁，", codes: ["NDHVO","HBYI","HYWV","HYT","CISM", null] },
+{ text: "獨釣寒江雪。", codes: ["KHWLI","CPI","JTCY","EM","MBSM", null] }
+        ]
+      },
+      {
+        title: "春曉 — 孟浩然",
+        lines: [
+{ text: "春眠不覺曉，", codes: ["QKA","BURVP","MF","HBBUU","AGGU", null] },
+{ text: "處處聞啼鳥。", codes: ["YPHEN","YPHEN","ANSJ","RYBB","HAYF", null] },
+{ text: "夜來風雨聲，", codes: ["YONK","DOO","HNHNI","MLBY","GESJ", null] },
+{ text: "花落知多少。", codes: ["TOP","TEHR","OKR","NINI","FH", null] }
+        ]
+      }
+    ]
+  }
+];
+
+// ===== 狀態 =====
+let currentUser = "";
+let currentLevel = null;
+let currentQuestions = [];
+let currentIndex = 0;
+let score = 0;
+let correctCount = 0;
+let wrongList = [];
+let timerInterval = null;
+let seconds = 0;
+
+// ===== 畫面切換 =====
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+// ===== 登入 =====
+function login() {
+  const name = document.getElementById("playerName").value.trim();
+  if (!name) { alert("請輸入名字！"); return; }
+  currentUser = name;
+  document.getElementById("userInfo").textContent = "👤 " + name;
+  showLevels();
+}
+
+// ===== 關卡列表 =====
+function showLevels() {
+  const list = document.getElementById("levelList");
+  list.innerHTML = "";
+  LEVELS.forEach(level => {
+    let count = 0;
+    if (level.isArticle) {
+      level.articles.forEach(article => {
+        article.lines.forEach(line => {
+          for (let i = 0; i < line.text.length; i++) {
+            const ch = line.text[i];
+            if (ch !== "，" && ch !== "。" && ch !== "、" && ch !== " ") count++;
+          }
+        });
+      });
+    } else {
+      count = Object.keys(level.chars).length;
+    }
+    const card = document.createElement("div");
+    card.className = "level-card";
+    card.innerHTML = `<div class="level-num">第 ${level.id} 關</div>
+                      <div class="level-name">${level.name}</div>
+                      <div class="level-count">${count > 0 ? count + " 個字" : "待補充"}</div>`;
+    if (count > 0) {
+      card.onclick = () => startLevel(level);
+    } else {
+      card.style.opacity = "0.5";
+      card.onclick = () => alert("此關卡尚未加入題目。");
+    }
+    list.appendChild(card);
+  });
+  showScreen("screen-levels");
+}
+
+// ===== 開始關卡 =====
+function startLevel(level) {
+  currentLevel = level;
+
+  if (level.isArticle) {
+    currentQuestions = [];
+    level.articles.forEach(article => {
+      article.lines.forEach(line => {
+        for (let i = 0; i < line.text.length; i++) {
+          const ch = line.text[i];
+          if (ch === "，" || ch === "。" || ch === "、" || ch === " ") continue;
+          const code = line.codes[i];
+          if (code) {
+            currentQuestions.push({
+              char: ch,
+              code: code,
+              articleTitle: article.title,
+              context: line.text,
+              contextIndex: i
+            });
+          }
+        }
+      });
+    });
+  } else {
+    currentQuestions = Object.entries(level.chars)
+      .filter(([_, v]) => {
+        if (typeof v === "object") return v && v.code;
+        return v && v.trim() !== "";
+      })
+      .map(([char, v]) => {
+        if (typeof v === "object") {
+          return { char, code: v.code, img: v.img };
+        }
+        return { char, code: v };
+      });
+  }
+
+  if (currentQuestions.length === 0) { alert("此關卡尚無題目！"); return; }
+
+  if (!level.isArticle) shuffle(currentQuestions);
+
+  currentIndex = 0; score = 0; correctCount = 0; wrongList = []; seconds = 0;
+
+  document.getElementById("levelTitle").textContent = `第 ${level.id} 關：${level.name}`;
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("answerInput").value = "";
+  document.getElementById("answerInput").disabled = false;
+
+  startTimer();
+  loadQuestion();
+  showScreen("screen-practice");
+  document.getElementById("answerInput").focus();
+}
+
+// ===== 計時器 =====
+function startTimer() {
+  clearInterval(timerInterval);
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    seconds++;
+    updateTimerDisplay();
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const m = String(Math.floor(seconds / 60)).padStart(2, "0");
+  const s = String(seconds % 60).padStart(2, "0");
+  document.getElementById("timer").textContent = `⏱ ${m}:${s}`;
+}
+
+// ===== 出題 =====
+function loadQuestion() {
+  if (currentIndex >= currentQuestions.length) { endLevel(); return; }
+  const q = currentQuestions[currentIndex];
+  const displayEl = document.getElementById("questionChar");
+  const contextEl = document.getElementById("contextDisplay");
+
+  if (q.img) {
+    displayEl.style.display = "";
+    contextEl.style.display = "none";
+    displayEl.innerHTML = `<img src="${q.img}" style="max-width:150px; max-height:150px;" alt="${q.char}">`;
+  } else if (q.context) {
+    displayEl.style.display = "none";
+    contextEl.style.display = "";
+    let html = `<div class="article-title">— ${q.articleTitle}</div>`;
+    html += `<div>`;
+    for (let i = 0; i < q.context.length; i++) {
+      if (i === q.contextIndex) {
+        html += `<span class="current-char">${q.context[i]}</span>`;
+      } else {
+        html += q.context[i];
+      }
+    }
+    html += `</div>`;
+    contextEl.innerHTML = html;
+  } else {
+    displayEl.style.display = "";
+    contextEl.style.display = "none";
+    displayEl.textContent = q.char;
+  }
+
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("answerInput").value = "";
+  document.getElementById("answerInput").focus();
+  updateProgress();
+  updateScoreDisplay();
+}
+
+function updateProgress() {
+  document.getElementById("progress").textContent = 
+    `${currentIndex + 1} / ${currentQuestions.length}`;
+}
+
+function updateScoreDisplay() {
+  document.getElementById("score").textContent = `⭐ ${score}`;
+}
+
+// ===== 輸入判斷 =====
+document.getElementById("answerInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") checkAnswer();
+});
+
+function checkAnswer() {
+  const input = document.getElementById("answerInput").value.trim().toUpperCase();
+  const q = currentQuestions[currentIndex];
+  const correct = q.code.toUpperCase().replace(/\s/g, "");
+  const userAns = input.replace(/\s/g, "");
+  const fb = document.getElementById("feedback");
+
+  if (userAns === correct) {
+    fb.textContent = "✅ 正確！";
+    fb.className = "feedback correct";
+    score += 10; correctCount++; currentIndex++;
+    setTimeout(loadQuestion, 250);
+  } else {
+    fb.textContent = `❌ 答錯了，正確是：${q.code}`;
+    fb.className = "feedback wrong";
+    wrongList.push(q.char);
+    score = Math.max(0, score - 3);
+    setTimeout(() => { currentIndex++; loadQuestion(); }, 1000);
+  }
+  updateScoreDisplay();
+}
+
+// ===== 按鈕 =====
+function skipQuestion() { currentIndex++; loadQuestion(); }
+function quitPractice() { clearInterval(timerInterval); showLevels(); }
+
+// ===== 結束 =====
+function endLevel() {
+  clearInterval(timerInterval);
+  const total = currentQuestions.length;
+  const accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+  const wpm = seconds > 0 ? Math.round((correctCount / seconds) * 60) : 0;
+  saveScore(currentLevel.id, { score, correctCount, total, accuracy, wpm, seconds, wrongList });
+
+  document.getElementById("resultContent").innerHTML = `
+    <p>⭐ 得分：${score}</p>
+    <p>✅ 答對：${correctCount} / ${total}</p>
+    <p>🎯 準確率：${accuracy}%</p>
+    <p>⚡ 速度：${wpm} 字／分鐘</p>
+    <p>⏱ 用時：${seconds} 秒</p>
+    ${wrongList.length ? `<p>📝 錯題：${wrongList.join("、")}</p>` : "<p>🎉 全對！太厲害了！</p>"}
+  `;
+  showScreen("screen-result");
+}
+
+// ===== 儲存 =====
+function saveScore(levelId, data) {
+  const key = "cangjie_scores_" + currentUser;
+  const all = JSON.parse(localStorage.getItem(key) || "{}");
+  const prev = all[levelId];
+  if (!prev || data.score > prev.score) all[levelId] = data;
+  localStorage.setItem(key, JSON.stringify(all));
+}
+
+function showScores() {
+  const key = "cangjie_scores_" + currentUser;
+  const all = JSON.parse(localStorage.getItem(key) || "{}");
+  let html = `<p><strong>學生：</strong>${currentUser}</p><hr style="margin:12px 0">`;
+  if (Object.keys(all).length === 0) {
+    html += "<p>還沒有成績記錄，快去練習吧！</p>";
+  } else {
+    LEVELS.forEach(lv => {
+      const s = all[lv.id];
+      if (s) html += `<p><strong>第 ${lv.id} 關：${lv.name}</strong><br>
+        得分 ${s.score}｜準確率 ${s.accuracy}%｜速度 ${s.wpm} 字/分</p>`;
+    });
+  }
+  document.getElementById("scoreContent").innerHTML = html;
+  showScreen("screen-scores");
+}
+
+// ===== 工具 =====
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+// ===== 初始化 =====
+showScreen("screen-login");
+</script>
+</body>
+</html>
